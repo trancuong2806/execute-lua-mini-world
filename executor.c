@@ -38,8 +38,13 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 	}
     case WM_COMMAND:
         if (LOWORD(wParam) == 1002) { // button
-            char buffer[1024];
-            GetDlgItemTextA(hwndDlg, 1001, buffer, sizeof(buffer));
+		    size_t bufSize = 1024 * 1024;
+			char *buffer = (char*)malloc(bufSize);
+			if (!buffer) {
+				MessageBoxA(hwndDlg, "Không đủ bộ nhớ!", "Error", MB_OK);
+				break;
+			}
+            GetDlgItemTextA(hwndDlg, 1001, buffer, (int)bufSize);
 
             if (luaL_loadstring(gL, buffer) == 0) {
                 lua_vpcall(gL, 0, 0, 0);
@@ -47,6 +52,7 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             } else {
                 MessageBoxA(hwndDlg, "Lua error!", "Error", MB_OK);
             }
+			free(buffer);
         }
         break;
     case WM_SIZE:
@@ -118,4 +124,3 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserv
     }
     return TRUE;
 }
-
