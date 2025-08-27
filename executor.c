@@ -38,7 +38,7 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 	}
     case WM_COMMAND:
         if (LOWORD(wParam) == 1002) { // button
-            char buffer[1024 * 1024];
+            char buffer[1024];
             GetDlgItemTextA(hwndDlg, 1001, buffer, sizeof(buffer));
 
             if (luaL_loadstring(gL, buffer) == 0) {
@@ -118,3 +118,4 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserv
     }
     return TRUE;
 }
+
