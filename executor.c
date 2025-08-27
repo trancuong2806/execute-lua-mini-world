@@ -39,26 +39,40 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam) 
     case WM_COMMAND:
         if (LOWORD(wParam) == 1002) { // button
 		    size_t bufSize = 1024 * 1024;
-			char *buffer = (char*)malloc(bufSize);
-			if (!buffer) {
-				MessageBoxA(hwndDlg, "Không đủ bộ nhớ!", "Error", MB_OK);
+			wchar_t *wbuffer = (wchar_t*)malloc(bufSize * sizeof(wchar_t));
+			if (!wbuffer) {
+				MessageBoxW(hwndDlg, L"Không đủ bộ nhớ!", L"Error", MB_OK);
 				break;
 			}
-            GetDlgItemTextA(hwndDlg, 1001, buffer, (int)bufSize);
+            GetDlgItemTextW(hwndDlg, 1001, wbuffer, (int)bufSize);
+			
+			int len = WideCharToMultiByte(CP_UTF8, 0, wbuffer, -1, NULL, 0, NULL, NULL);
+			char *utf8buf = (char*)malloc(len);
+			if (!utf8buf) {
+				MessageBoxW(hwndDlg, L"Không đủ bộ nhớ UTF-8", L"Error", MB_OK);
+				free(wbuffer);
+				break;
+			}
+			WideCharToMultiByte(CP_UTF8, 0, wbuffer, -1, utf8buf, len, NULL, NULL);
 
-            if (luaL_loadstring(gL, buffer) == 0) {
-                lua_vpcall(gL, 0, 0, 0);
-                MessageBoxA(hwndDlg, "Lua code executed!", "Success", MB_OK);
-            } else {
-                MessageBoxA(hwndDlg, "Lua error!", "Error", MB_OK);
-            }
-			free(buffer);
+            if (luaL_loadstring(gL, utf8buf) == 0) {
+                if (lua_vpcall(gL, 0, 0, 0)==0){
+                MessageBoxW(hwndDlg, L"Lua code executed!", L"Success", MB_OK);
+                    } else {
+                MessageBoxW(hwndDlg, L"Lua error!", L"Error", MB_OK);
+                }
+			} else {
+				MessageBoxW(hwndDlg, L"Lua load error!", L"Error", MB_OK);
+			}
+			 free(utf8buf);
+             free(wbuffer);
         }
         break;
     case WM_SIZE:
 	{
-        HWND hEdit = GetDlgItem(hwndDlg, 1001);
-        HWND hBtn  = GetDlgItem(hwndDlg, 1002);
+		HWND hLabel = GetDlgItem(hwndDlg, 1000);
+        HWND hEdit  = GetDlgItem(hwndDlg, 1001);
+        HWND hBtn   = GetDlgItem(hwndDlg, 1002);
         if (hEdit && hBtn) {
             RECT rcClient;
             GetClientRect(hwndDlg, &rcClient);
@@ -67,6 +81,11 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             int editRight = rcClient.right - 10;
             int editBottom = rcClient.bottom - 50;
 			MoveWindow(hEdit, editLeft, editTop, editRight - editLeft, editBottom - editTop, TRUE);
+			int labelLeft = editLeft;
+			int labelTop  = editTop - 20;
+			int labelWidth = editRight - editLeft;
+			int labelHeight = 20;
+			MoveWindow(hLabel, labelLeft, labelTop, labelWidth, labelHeight, TRUE);
 			int btnWidth = 80, btnHeight = 25;
             MoveWindow(hBtn, (rcClient.right - btnWidth) / 2, rcClient.bottom - btnHeight - 10, btnWidth, btnHeight, TRUE);
         }
@@ -87,7 +106,7 @@ DWORD WINAPI MainThread(LPVOID lpParam) {
     // module liblua.dll
     HMODULE hLua = GetModuleHandleA("liblua.dll");
     if (!hLua) {
-        MessageBoxA(NULL, "Không tìm thấy liblua.dll", "DLL Inject", MB_OK);
+        MessageBoxW(NULL, L"Không tìm thấy liblua.dll", L"DLL Inject", MB_OK);
         return 0;
     }
 
@@ -99,7 +118,7 @@ DWORD WINAPI MainThread(LPVOID lpParam) {
     lua_vpcall      = (lua_vpcall_Func)GetProcAddress(hLua, "lua_vpcall");
 
     if (!luaL_newstate || !luaL_openlibs || !lua_close || !luaL_loadstring || !lua_vpcall) {
-        MessageBoxA(NULL, "Không lấy được hàm Lua", "DLL Inject", MB_OK);
+        MessageBoxW(NULL, L"Không lấy được hàm Lua", L"DLL Inject", MB_OK);
         return 0;
     }
 
@@ -108,8 +127,7 @@ DWORD WINAPI MainThread(LPVOID lpParam) {
     luaL_openlibs(gL);
 
     // Open UI
-    extern HMODULE g_hModule;
-    DialogBoxParamA(g_hModule, MAKEINTRESOURCE(101), NULL, DlgProc, 0);
+    DialogBoxParamW(g_hModule, MAKEINTRESOURCE(101), NULL, DlgProc, 0);
     lua_close(gL);
 
     return 0;
