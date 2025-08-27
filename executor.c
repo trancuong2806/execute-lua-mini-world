@@ -30,20 +30,20 @@ LRESULT CALLBACK EditSubclassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lP
 DWORD WINAPI LuaThread(LPVOID param) {
     char *code = (char*)param;
     lua_State *L = luaL_newstate();
+	if (!L) { free(code); return 0; };
     luaL_openlibs(L);
 
     if (luaL_loadstring(L, code) == 0) {
-        free(code);
         if (lua_vpcall(L, 0, 0, 0) == 0) {
             MessageBoxW(NULL, L"Lua code executed!", L"Success", MB_OK);
         } else {
             MessageBoxW(NULL, L"Lua error!", L"Error", MB_OK);
         }
     } else {
-        free(code);
         MessageBoxW(NULL, L"Lua load error!", L"Error", MB_OK);
     }
     lua_close(L);
+	free(code);
     return 0;
 }
 INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam) {
