@@ -28,6 +28,22 @@ LRESULT CALLBACK EditSubclassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lP
     }
     return CallWindowProc(oldEditProc, hwnd, uMsg, wParam, lParam);
 }
+DWORD WINAPI LuaThread(LPVOID param) {
+    char *code = (char*)param;
+
+    if (luaL_loadstring(gL, code) == 0) {
+        if (lua_vpcall(gL, 0, 0, 0) == 0) {
+            MessageBoxW(NULL, L"Lua code executed!", L"Success", MB_OK);
+        } else {
+            MessageBoxW(NULL, L"Lua error!", L"Error", MB_OK);
+        }
+    } else {
+        MessageBoxW(NULL, L"Lua load error!", L"Error", MB_OK);
+    }
+
+    free(code);
+    return 0;
+}
 INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     switch (uMsg) {
 	case WM_INITDIALOG: {
@@ -53,19 +69,9 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 				free(wbuffer);
 				break;
 			}
-			WideCharToMultiByte(CP_UTF8, 0, wbuffer, -1, utf8buf, len, NULL, NULL);
-
-            if (luaL_loadstring(gL, utf8buf) == 0) {
-                if (lua_vpcall(gL, 0, 0, 0)==0){
-                    MessageBoxW(hwndDlg, L"Lua code executed!", L"Success", MB_OK);
-                    } else {
-                        MessageBoxW(hwndDlg, L"Lua error!", L"Error", MB_OK);
-                    }
-			    } else {
-				    MessageBoxW(hwndDlg, L"Lua load error!", L"Error", MB_OK);
-			    }
-			 free(utf8buf);
-             free(wbuffer);
+			WideCharToMultiByte(CP_UTF8, 0, wbuffer, -1, utf8buf, len, NULL, NULL);			
+			CreateThread(NULL, 0, LuaThread, utf8buf, 0, NULL);
+			free(wbuffer);
         }
         break;
     case WM_SIZE:
