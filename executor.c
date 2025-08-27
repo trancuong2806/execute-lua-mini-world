@@ -57,13 +57,13 @@ INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 
             if (luaL_loadstring(gL, utf8buf) == 0) {
                 if (lua_vpcall(gL, 0, 0, 0)==0){
-                MessageBoxW(hwndDlg, L"Lua code executed!", L"Success", MB_OK);
+                    MessageBoxW(hwndDlg, L"Lua code executed!", L"Success", MB_OK);
                     } else {
-                MessageBoxW(hwndDlg, L"Lua error!", L"Error", MB_OK);
-                }
-			} else {
-				MessageBoxW(hwndDlg, L"Lua load error!", L"Error", MB_OK);
-			}
+                        MessageBoxW(hwndDlg, L"Lua error!", L"Error", MB_OK);
+                    }
+			    } else {
+				    MessageBoxW(hwndDlg, L"Lua load error!", L"Error", MB_OK);
+			    }
 			 free(utf8buf);
              free(wbuffer);
         }
