@@ -28,6 +28,7 @@ LRESULT CALLBACK EditSubclassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lP
     return CallWindowProc(oldEditProc, hwnd, uMsg, wParam, lParam);
 }
 DWORD WINAPI LuaThread(LPVOID param) {
+	//Lua state
     char *code = (char*)param;
     lua_State *L = luaL_newstate();
 	if (!L) { free(code); return 0; };
