@@ -17,7 +17,6 @@ static lua_close_Func lua_close = NULL;
 static luaL_loadstring_Func luaL_loadstring = NULL;
 static lua_vpcall_Func lua_vpcall = NULL;
 static HMODULE g_hModule = NULL;
-static lua_State *gL = NULL;
 static WNDPROC oldEditProc = NULL;
 
 // UI
@@ -30,18 +29,21 @@ LRESULT CALLBACK EditSubclassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lP
 }
 DWORD WINAPI LuaThread(LPVOID param) {
     char *code = (char*)param;
+    lua_State *L = luaL_newstate();
+    luaL_openlibs(L);
 
-    if (luaL_loadstring(gL, code) == 0) {
-        if (lua_vpcall(gL, 0, 0, 0) == 0) {
+    if (luaL_loadstring(L, code) == 0) {
+        free(code);
+        if (lua_vpcall(L, 0, 0, 0) == 0) {
             MessageBoxW(NULL, L"Lua code executed!", L"Success", MB_OK);
         } else {
             MessageBoxW(NULL, L"Lua error!", L"Error", MB_OK);
         }
     } else {
+        free(code);
         MessageBoxW(NULL, L"Lua load error!", L"Error", MB_OK);
     }
-
-    free(code);
+    lua_close(L);
     return 0;
 }
 INT_PTR CALLBACK DlgProc(HWND hwndDlg, UINT uMsg, WPARAM wParam, LPARAM lParam) {
@@ -128,14 +130,8 @@ DWORD WINAPI MainThread(LPVOID lpParam) {
         return 0;
     }
 
-    // Lua state
-    gL = luaL_newstate();
-    luaL_openlibs(gL);
-
     // Open UI
     DialogBoxParamW(g_hModule, MAKEINTRESOURCE(101), NULL, DlgProc, 0);
-    lua_close(gL);
-
     return 0;
 }
 
