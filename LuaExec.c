@@ -2,9 +2,12 @@
 #include <stdio.h>
 #include <stdint.h> 
 #include <wchar.h>
+#define LUA_REGISTRYINDEX (-10000)
 typedef struct lua_State lua_State;
 
 // Typedef
+typedef int  (*luaL_ref_Func)(lua_State* L, int t);
+typedef void (*luaL_unref_Func)(lua_State* L, int t, int ref);
 typedef lua_State* (*luaL_newstate_Func)(void);
 typedef lua_State* (*lua_newthread_Func)(lua_State* L);
 typedef void (*lua_settop_Func)(lua_State* L, int index);
@@ -23,6 +26,8 @@ static HMODULE g_hModule = NULL;
 static WNDPROC oldEditProc = NULL;
 static lua_newthread_Func lua_newthread = NULL;
 static lua_settop_Func    lua_settop    = NULL;
+static luaL_ref_Func   luaL_ref = NULL;
+static luaL_unref_Func luaL_unref = NULL;
 typedef struct {
     char *code;
     lua_State *L;
@@ -30,7 +35,7 @@ typedef struct {
 
 lua_State* CreateLuaThread(lua_State* L) {
     if (!L) return NULL;
-    lua_State* thread = lua_newthread(L);   
+    lua_State* thread = lua_newthread(L);
     return thread;
 }
 // UI
@@ -50,6 +55,12 @@ DWORD WINAPI LuaThread(LPVOID param) {
     }
 
     lua_State *L = CreateLuaThread(p->L);
+	if (!L) {
+        free(p->code);
+        free(p);
+        return 0;
+    }
+	int ref = luaL_ref(p->L, LUA_REGISTRYINDEX);
     char *code = p->code;
     if (luaL_loadstring(L, code) == 0) {
         if (lua_vpcall(L, 0, 0, 0) == 0) {
@@ -60,6 +71,8 @@ DWORD WINAPI LuaThread(LPVOID param) {
     } else {
         MessageBoxW(NULL, L"Lua load error!", L"Error", MB_OK);
     }
+	lua_settop(L, 0);
+	luaL_unref(p->L, LUA_REGISTRYINDEX, ref);
 	free(code);
 	free(p);
     return 0;
@@ -190,8 +203,10 @@ DWORD WINAPI MainThread(LPVOID lpParam) {
     lua_vpcall      = (lua_vpcall_Func)GetProcAddress(hLua, "lua_vpcall");
 	lua_newthread = (lua_newthread_Func)GetProcAddress(hLua, "lua_newthread");
     lua_settop    = (lua_settop_Func)GetProcAddress(hLua, "lua_settop");
+	luaL_ref   = (luaL_ref_Func)GetProcAddress(hLua, "luaL_ref");
+    luaL_unref = (luaL_unref_Func)GetProcAddress(hLua, "luaL_unref");
 
-    if (!luaL_newstate || !luaL_openlibs || !lua_close || !luaL_loadstring || !lua_vpcall || !lua_newthread || !lua_settop) {
+    if (!luaL_newstate || !luaL_openlibs || !lua_close || !luaL_loadstring || !lua_vpcall || !lua_newthread || !lua_settop || !luaL_ref || !luaL_unref) {
         MessageBoxW(NULL, L"Không lấy được hàm Lua", L"DLL Inject", MB_OK);
         return 0;
     }
