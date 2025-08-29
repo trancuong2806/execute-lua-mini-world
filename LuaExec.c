@@ -6,6 +6,8 @@ typedef struct lua_State lua_State;
 
 // Typedef
 typedef lua_State* (*luaL_newstate_Func)(void);
+typedef lua_State* (*lua_newthread_Func)(lua_State* L);
+typedef void (*lua_settop_Func)(lua_State* L, int index);
 typedef void (*luaL_openlibs_Func)(lua_State*);
 typedef void (*lua_close_Func)(lua_State*);
 typedef int  (*luaL_loadstring_Func)(lua_State*, const char*);
@@ -19,11 +21,18 @@ static luaL_loadstring_Func luaL_loadstring = NULL;
 static lua_vpcall_Func lua_vpcall = NULL;
 static HMODULE g_hModule = NULL;
 static WNDPROC oldEditProc = NULL;
+static lua_newthread_Func lua_newthread = NULL;
+static lua_settop_Func    lua_settop    = NULL;
 typedef struct {
     char *code;
     lua_State *L;
 } LuaExecParam;
 
+lua_State* CreateLuaThread(lua_State* L) {
+    if (!L) return NULL;
+    lua_State* thread = lua_newthread(L);   
+    return thread;
+}
 // UI
 LRESULT CALLBACK EditSubclassProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     if ((uMsg == WM_KEYDOWN) && (GetKeyState(VK_CONTROL) & 0x8000) && (wParam == 'A')) {
@@ -40,7 +49,7 @@ DWORD WINAPI LuaThread(LPVOID param) {
         return 0;
     }
 
-    lua_State *L = p->L;
+    lua_State *L = CreateLuaThread(p->L);
     char *code = p->code;
     if (luaL_loadstring(L, code) == 0) {
         if (lua_vpcall(L, 0, 0, 0) == 0) {
@@ -179,8 +188,10 @@ DWORD WINAPI MainThread(LPVOID lpParam) {
     lua_close       = (lua_close_Func)GetProcAddress(hLua, "lua_close");
     luaL_loadstring = (luaL_loadstring_Func)GetProcAddress(hLua, "luaL_loadstring");
     lua_vpcall      = (lua_vpcall_Func)GetProcAddress(hLua, "lua_vpcall");
+	lua_newthread = (lua_newthread_Func)GetProcAddress(hLua, "lua_newthread");
+    lua_settop    = (lua_settop_Func)GetProcAddress(hLua, "lua_settop");
 
-    if (!luaL_newstate || !luaL_openlibs || !lua_close || !luaL_loadstring || !lua_vpcall) {
+    if (!luaL_newstate || !luaL_openlibs || !lua_close || !luaL_loadstring || !lua_vpcall || !lua_newthread || !lua_settop) {
         MessageBoxW(NULL, L"Không lấy được hàm Lua", L"DLL Inject", MB_OK);
         return 0;
     }
