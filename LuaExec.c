@@ -71,7 +71,6 @@ DWORD WINAPI LuaThread(LPVOID param) {
     } else {
         MessageBoxW(NULL, L"Lua load error!", L"Error", MB_OK);
     }
-	lua_settop(L, 0);
 	luaL_unref(p->L, LUA_REGISTRYINDEX, ref);
 	free(code);
 	free(p);
@@ -225,3 +224,4 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserv
     }
     return TRUE;
 }
+
